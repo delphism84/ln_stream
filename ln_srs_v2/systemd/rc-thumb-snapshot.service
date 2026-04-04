@@ -1,0 +1,22 @@
+[Unit]
+Description=Stream thumbnail auto-generation (SRS + ffmpeg, 10s live / 1min fallback)
+After=network.target srs.service
+Wants=srs.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/node /var/www/@rc-streamserver/srs/srs-server-6.0-b0/trunk/scripts/thumb-snapshot.mjs
+Environment=SRS_API_URL=http://127.0.0.1:1985
+Environment=THUMB_OUT_DIR=/var/www/static/live/thumb
+Environment=RTMP_BASE=rtmp://stream.kingofzeusfin.com:1935/live
+Environment=HLS_BASE=https://stream.kingofzeusfin.com/live
+Environment=CAPTURE_SOURCE=hls
+Environment=INTERVAL_LIVE_SEC=10
+Environment=INTERVAL_FALLBACK_SEC=60
+Environment=STREAM_IDS=table01_01,table02_01,table03_01,table04_01,table05_01,table06_01,table07_01,table08_01,table09_01,table10_01,table11_01,table12_01,table13_01,table14_01,table15_01,table16_01
+Restart=always
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target
