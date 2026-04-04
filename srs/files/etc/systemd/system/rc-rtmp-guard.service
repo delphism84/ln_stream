@@ -1,6 +1,0 @@
-[Unit]
-Description=RC RTMP Guard (auto-heal 1935/1985/8085)
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/rc-rtmp-guard.sh

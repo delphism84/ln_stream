@@ -1,6 +1,0 @@
-[Unit]
-Description=RC RTMP Monitor (periodic snapshot)
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/rc-rtmp-monitor.sh
