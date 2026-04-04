@@ -1,0 +1,16 @@
+[Unit]
+Description=Run SRS Log Cleanup Daily
+Requires=srs-log-cleanup.service
+
+[Timer]
+# 매일 새벽 3시에 실행
+OnCalendar=*-*-* 03:00:00
+# 시스템 부팅 후 10분 후에도 실행 (부팅 시점이 새벽 3시 근처일 경우 대비)
+OnBootSec=10min
+# 서비스가 실패해도 계속 실행
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+
+

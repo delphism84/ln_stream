@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HLS(m3u8) 송출·재생 검증 플레이어</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --panel: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --ok: #3fb950;
+      --warn: #d29922;
+      --err: #f85149;
+      --accent: #58a6ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.45;
+    }
+    .wrap {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    h1 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 0 0 8px;
+    }
+    .note {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 16px;
+      padding: 10px 12px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    label { font-size: 0.85rem; color: var(--muted); }
+    input[type="url"] {
+      flex: 1 1 240px;
+      min-width: 0;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #0d1117;
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+    button {
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--accent);
+      color: #0d1117;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    button.secondary {
+      background: var(--panel);
+      color: var(--text);
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .video-box {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      vertical-align: middle;
+    }
+    .stats {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 8px;
+      font-size: 0.75rem;
+    }
+    .stat {
+      padding: 8px 10px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .stat k { display: block; color: var(--muted); font-size: 0.7rem; margin-bottom: 2px; }
+    .log {
+      margin-top: 14px;
+      padding: 10px 12px;
+      background: #010409;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.4;
+      max-height: 220px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .log .line-ok { color: var(--ok); }
+    .log .line-warn { color: var(--warn); }
+    .log .line-err { color: var(--err); }
+    .log .line-info { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>HLS(m3u8) 송출·재생 검증</h1>
+    <p class="note">
+      이 페이지는 <strong>브라우저에서의 안정 재생에 가깝게 튜닝한 hls.js 설정</strong>으로 스트림을 붙여,
+      끊김·버퍼·에러 로그를 확인하기 위한 <strong>검증용</strong>입니다.
+      원본 인코딩(GOP·키프레임)·네트워크·CORS에 따라 재생은 달라질 수 있으며,
+      &quot;항상 100% 무결&quot;을 보장하는 단일 설정은 없습니다.
+      엣지에서 <code>max_ranges 0</code> 등으로 세그먼트를 <strong>전체 <code>200</code></strong>으로 주는 구성이면, 불필요한 <code>206</code>·부분 재시도 패턴을 줄이는 데 유리합니다(nginx·SRS는 별도 문서 참고).
+    </p>
+
+    <div class="row">
+      <label for="url">m3u8 URL</label>
+      <input id="url" type="url" placeholder="https://example.com/live/stream.m3u8" autocomplete="off" />
+      <button type="button" id="btnPlay">재생</button>
+      <button type="button" id="btnStop" class="secondary">중지</button>
+    </div>
+
+    <div class="video-box">
+      <video id="v" playsinline controls muted></video>
+    </div>
+
+    <div class="stats" id="stats"></div>
+    <div class="log" id="log" aria-live="polite"></div>
+  </div>
+
+  <!-- 안정성·호환 위주 버전 고정 (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
+  <script>
+(function () {
+  var video = document.getElementById("v");
+  var urlInput = document.getElementById("url");
+  var btnPlay = document.getElementById("btnPlay");
+  var btnStop = document.getElementById("btnStop");
+  var logEl = document.getElementById("log");
+  var statsEl = document.getElementById("stats");
+  var hls = null;
+  var logLines = 0;
+  var MAX_LOG = 200;
+
+  function qs(name) {
+    var m = new RegExp("[?&]" + encodeURIComponent(name) + "=([^&]*)").exec(location.search);
+    return m ? decodeURIComponent(m[1].replace(/\+/g, " ")) : "";
+  }
+
+  function log(msg, cls) {
+    if (logLines >= MAX_LOG) {
+      logEl.removeChild(logEl.firstChild);
+      logLines--;
+    }
+    var span = document.createElement("div");
+    span.className = cls ? "line-" + cls : "line-info";
+    span.textContent = new Date().toISOString().slice(11, 23) + " " + msg;
+    logEl.appendChild(span);
+    logLines++;
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function destroyHls() {
+    if (hls) {
+      try { hls.destroy(); } catch (e) {}
+      hls = null;
+    }
+    video.removeAttribute("src");
+    try { video.load(); } catch (e) {}
+  }
+
+  /**
+   * 송출·엣지가 “전체 파일 200” 위주일 때 끊김·206 패턴을 줄이기 위한 보수적 라이브 설정.
+   * (낮은 지연보다 버퍼·재시도·동기 여유)
+   */
+  function buildHlsConfig() {
+    return {
+      lowLatencyMode: false,
+      liveSyncDurationCount: 3,
+      liveMaxLatencyDurationCount: 12,
+      maxLiveSyncPlaybackRate: 1.35,
+      maxBufferLength: 30,
+      maxMaxBufferLength: 120,
+      backBufferLength: 60,
+      maxBufferHole: 0.5,
+      highBufferWatchdogPeriod: 2,
+      nudgeOffset: 0.05,
+      nudgeMaxRetry: 5,
+      manifestLoadingTimeOut: 20000,
+      manifestLoadingMaxRetry: 6,
+      levelLoadingTimeOut: 20000,
+      fragLoadingTimeOut: 25000,
+      fragLoadingMaxRetry: 8,
+      startFragPrefetch: true,
+      testBandwidth: false,
+      capLevelToPlayerSize: false,
+      // Safari 외 브라우저: worker 사용 시 일부 환경에서만 이슈 → 기본 유지
+      enableWorker: true,
+      xhrSetup: function (xhr) {
+        xhr.withCredentials = false;
+      },
+    };
+  }
+
+  function statRow(key, val) {
+    var d = document.createElement("div");
+    d.className = "stat";
+    d.innerHTML = "<k>" + key + "</k>" + String(val);
+    return d;
+  }
+
+  function updateStats() {
+    statsEl.innerHTML = "";
+    if (!video.src && !hls) {
+      statsEl.appendChild(statRow("상태", "대기"));
+      return;
+    }
+    var buf = video.buffered.length ? (video.buffered.end(video.buffered.length - 1) - video.currentTime).toFixed(1) : "—";
+    statsEl.appendChild(statRow("readyState", video.readyState));
+    statsEl.appendChild(statRow("networkState", video.networkState));
+    statsEl.appendChild(statRow("buffer ahead (s)", buf));
+    statsEl.appendChild(statRow("currentTime", video.currentTime.toFixed(2)));
+    if (hls && hls.levels && hls.currentLevel >= 0) {
+      var lv = hls.levels[hls.currentLevel];
+      statsEl.appendChild(statRow("level", (lv.height || "?") + "p " + (lv.bitrate ? Math.round(lv.bitrate / 1000) + "kbps" : "")));
+    }
+  }
+
+  setInterval(updateStats, 500);
+
+  function play() {
+    var url = (urlInput.value || "").trim();
+    if (!url) {
+      log("URL을 입력하세요.", "warn");
+      return;
+    }
+    destroyHls();
+    log("로드: " + url, "ok");
+
+    if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      log("네이티브 HLS(Safari 등) 사용", "ok");
+      video.src = url;
+      video.play().catch(function (e) { log("play error: " + e, "err"); });
+      return;
+    }
+
+    if (typeof Hls === "undefined" || !Hls.isSupported()) {
+      log("hls.js 미지원 브라우저입니다.", "err");
+      return;
+    }
+
+    hls = new Hls(buildHlsConfig());
+    hls.attachMedia(video);
+
+    hls.on(Hls.Events.MANIFEST_PARSED, function () {
+      log("MANIFEST_PARSED, levels=" + hls.levels.length, "ok");
+      video.play().catch(function (e) { log("play error: " + e, "err"); });
+    });
+
+    hls.on(Hls.Events.ERROR, function (ev, data) {
+      var fatal = data && data.fatal;
+      var t = (data && data.type) || "";
+      var details = (data && data.details) || "";
+      var msg = "ERROR type=" + t + " details=" + details + (fatal ? " FATAL" : "");
+      log(msg, fatal ? "err" : "warn");
+      if (fatal && data) {
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+          log("복구 시도: startLoad", "warn");
+          hls.startLoad();
+        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+          log("복구 시도: recoverMediaError", "warn");
+          hls.recoverMediaError();
+        }
+      }
+    });
+
+    hls.on(Hls.Events.FRAG_LOADED, function () {
+      // 너무 시끄러우면 주석 처리
+    });
+
+    hls.loadSource(url);
+  }
+
+  function stop() {
+    destroyHls();
+    log("중지", "info");
+  }
+
+  btnPlay.addEventListener("click", play);
+  btnStop.addEventListener("click", stop);
+
+  var q = qs("url");
+  if (q) {
+    urlInput.value = q;
+  }
+  log("준비됨. m3u8 URL 입력 후 재생. 공유 링크: 이 페이지 주소에 ?url=인코딩된주소", "info");
+})();
+  </script>
+</body>
+</html>

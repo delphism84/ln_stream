@@ -1,0 +1,14 @@
+[Unit]
+Description=Run SRS/system log cleanup hourly
+Requires=srs-log-cleanup.service
+
+[Timer]
+OnCalendar=hourly
+OnBootSec=5min
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target
+
+

@@ -1,0 +1,13 @@
+[Unit]
+Description=RC SRS upload alert (Telegram)
+After=network.target srs.service
+Wants=srs.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/default/rc-srs-upload-alert
+ExecStart=/usr/local/bin/rc-srs-upload-alert.sh
+User=root
+StandardOutput=journal
+StandardError=journal
+

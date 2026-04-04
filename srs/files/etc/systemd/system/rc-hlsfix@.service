@@ -1,0 +1,19 @@
+[Unit]
+Description=RC HLSFix Transmux (%i) (rtmp->hls, copy video, inject SPS/PPS, reencode audio)
+After=network.target srs.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/rc-hlsfix.sh %i
+Restart=always
+RestartSec=5
+TimeoutStartSec=10
+TimeoutStopSec=5
+
+# Kill the whole cgroup to avoid left-over ffprobe/timeout/sleep processes.
+KillMode=control-group
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target
+

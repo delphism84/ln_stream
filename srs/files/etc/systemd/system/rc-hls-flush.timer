@@ -1,0 +1,13 @@
+[Unit]
+Description=Run RC HLS directory flush periodically
+
+[Timer]
+# 5분 주기 + 부하 분산
+OnBootSec=2min
+OnUnitActiveSec=5min
+RandomizedDelaySec=30s
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+

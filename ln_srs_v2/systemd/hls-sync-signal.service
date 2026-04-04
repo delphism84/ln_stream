@@ -1,0 +1,17 @@
+[Unit]
+Description=HLS sync signal server (synthetic PDT + WebSocket)
+After=network.target srs.service
+Wants=srs.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/node /var/www/static/live/hls/sync-signal/hls-sync-signal.js
+Restart=always
+RestartSec=2
+Environment=HLS_SYNC_HOST=127.0.0.1
+Environment=HLS_SYNC_PORT=8090
+Environment=HLS_SYNC_M3U8_ROOT=/var/www/static/live/hls/live
+Environment=HLS_SYNC_TICK_MS=300
+
+[Install]
+WantedBy=multi-user.target

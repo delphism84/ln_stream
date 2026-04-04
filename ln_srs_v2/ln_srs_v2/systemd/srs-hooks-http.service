@@ -1,0 +1,18 @@
+[Unit]
+Description=SRS Hooks HTTP server (allow on_publish)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /var/www/@rc-streamserver/srs/srs-server-6.0-b0/trunk/scripts/hooks_http.py
+# Disable killing publishers from hooks (keep uploader connected even if camera stalls/corrupts).
+Environment=SRS_HOOKS_PUBLISH_HEALTHCHECK_KILL=0
+Environment=SRS_HOOKS_WATCHDOG_KILL=0
+Restart=always
+RestartSec=1
+TimeoutStartSec=5
+KillMode=mixed
+User=root
+
+[Install]
+WantedBy=multi-user.target

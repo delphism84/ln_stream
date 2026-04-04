@@ -1,0 +1,23 @@
+#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-MEDIA-SEQUENCE:0
+#EXT-X-TARGETDURATION:1
+#EXT-X-DISCONTINUITY
+#EXTINF:0.510, no desc
+table01_01_test-0.ts
+#EXTINF:0.511, no desc
+table01_01_test-1.ts
+#EXTINF:0.511, no desc
+table01_01_test-2.ts
+#EXTINF:0.511, no desc
+table01_01_test-3.ts
+#EXTINF:0.511, no desc
+table01_01_test-4.ts
+#EXTINF:0.511, no desc
+table01_01_test-5.ts
+#EXTINF:0.510, no desc
+table01_01_test-6.ts
+#EXTINF:0.511, no desc
+table01_01_test-7.ts
+#EXTINF:0.847, no desc
+table01_01_test-8.ts

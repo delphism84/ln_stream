@@ -1,0 +1,53 @@
+# main config for srs.
+# @see full.conf for detail config.
+
+listen              1935;
+max_connections     1000;
+srs_log_tank        file;
+srs_log_file        ./logs/srs.log;
+daemon              off;
+http_api {
+    enabled         on;
+    listen          1985;
+}
+http_server {
+    enabled         off;
+    listen          8080;
+    dir             /var/www/static;
+}
+vhost __defaultVhost__ {
+    hls {
+        enabled         on;
+        hls_path        /var/www/static/live/hls;
+        hls_fragment    1;
+        hls_window      3;
+    }
+
+    play{
+        gop_cache_max_frames 2500;
+    }
+
+    http_hooks {
+        enabled         on;
+        on_publish      http://127.0.0.1:8085/on_publish;
+        on_unpublish    http://127.0.0.1:8085/on_unpublish;
+    }
+}
+
+pid                 ./pids/srs.pid;
+
+# dedicated vhost for publisher domain
+vhost stream.royalcasinosolution.com {
+    hls {
+        enabled on;
+        hls_path /var/www/static/live/hls;
+        hls_fragment 1;
+        hls_window 3;
+    }
+
+    http_hooks {
+        enabled         on;
+        on_publish      http://127.0.0.1:8085/on_publish;
+        on_unpublish    http://127.0.0.1:8085/on_unpublish;
+    }
+}
