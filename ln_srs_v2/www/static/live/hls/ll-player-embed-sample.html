@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Embed Player Debug Tester</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #222; color: #fff; font-family: monospace; }
+        .container { max-width: 800px; margin: 20px auto; padding: 20px; background: #333; border-radius: 8px; }
+        input { width: 100%; padding: 10px; margin: 10px 0; background: #444; color: #fff; border: 1px solid #555; }
+        button { padding: 10px 20px; background: #38bdf8; border: none; color: #fff; cursor: pointer; border-radius: 4px; }
+        .preview { margin-top: 20px; width: 100%; aspect-ratio: 16/9; background: #000; border: 2px dashed #555; }
+        iframe { width: 100%; height: 100%; border: none; }
+        #logs { margin-top: 10px; padding: 10px; background: #111; max-height: 200px; overflow-y: auto; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>LL-Player Embed Tester</h2>
+        <div>
+            <label>Table ID (e.g. 03)</label>
+            <input type="text" id="tId" value="03" />
+            <label>Cam ID (e.g. 01)</label>
+            <input type="text" id="cId" value="01" />
+            <button onclick="loadPlayer()">Load Player</button>
+        </div>
+        <div class="preview" id="previewBox">
+        </div>
+        <div id="logs"></div>
+    </div>
+    <script>
+        function log(msg) {
+            document.getElementById('logs').innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>`;
+        }
+        function loadPlayer() {
+            const tId = document.getElementById('tId').value;
+            const cId = document.getElementById('cId').value;
+            const url = `/ll-player-embed.html?tableId=${tId}&camId=${cId}`;
+            log(`Loading iframe src: ${url}`);
+            
+            const iframe = document.createElement("iframe");
+            iframe.src = url;
+            iframe.allow = "autoplay; fullscreen";
+            
+            const box = document.getElementById('previewBox');
+            box.innerHTML = '';
+            box.appendChild(iframe);
+            
+            log(`Checking m3u8 direct request: /llhls/live/table${tId.padStart(2,'0')}_${cId.padStart(2,'0')}.m3u8`);
+            fetch(`/llhls/live/table${tId.padStart(2,'0')}_${cId.padStart(2,'0')}.m3u8`)
+                .then(r => {
+                    log(`M3U8 fetch response: HTTP ${r.status}`);
+                    return r.text();
+                })
+                .then(t => log(`M3U8 content start: ${t.slice(0, 50).replace(/\n/g, ' ')}...`))
+                .catch(e => log(`M3U8 fetch error: ${e.message}`));
+        }
+        // Auto load on start
+        loadPlayer();
+    </script>
+</body>
+</html>

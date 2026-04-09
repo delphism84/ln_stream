@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Live Player</title>
+    <script src="/hls.min.js"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            overflow: hidden;
+        }
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+        }
+        #overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-family: sans-serif;
+            background: rgba(0,0,0,0.7);
+            z-index: 10;
+        }
+        .hidden { display: none !important; }
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top: 4px solid #fff;
+            width: 40px; height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div id="overlay">
+        <div class="spinner"></div>
+    </div>
+    <video id="video" muted autoplay playsinline></video>
+
+    <script>
+        // Fallback for hls.js if local script fails
+        if (typeof Hls === 'undefined') {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"><\/script>');
+        }
+    </script>
+
+    <script>
+        // Parse URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const tableId = urlParams.get('tableId') ? urlParams.get('tableId').padStart(2, '0') : '01';
+        const camId = urlParams.get('camId') ? urlParams.get('camId').padStart(2, '0') : '01';
+        const streamName = `table${tableId}_${camId}`;
+        const m3u8Url = `/llhls/live/${streamName}.m3u8`;
+
+        const video = document.getElementById('video');
+        const overlay = document.getElementById('overlay');
+        let hls = null;
+        let retryCount = 0;
+        let errorTimeout = null;
+
+        function showLoading() {
+            overlay.classList.remove('hidden');
+            overlay.innerHTML = '<div class="spinner"></div>';
+        }
+
+        function hideLoading() {
+            overlay.classList.add('hidden');
+        }
+
+        function showError() {
+            overlay.classList.remove('hidden');
+            overlay.innerHTML = `<div style="text-align: center; color: #ff5555; font-size: 14px;">
+                스트림이 오프라인 상태입니다.<br>(${streamName})<br>
+                <span style="font-size:12px; color:#aaa; margin-top:5px; display:block">재연결 중...</span>
+            </div>`;
+        }
+
+        function initPlayer() {
+            showLoading();
+            if (hls) { hls.destroy(); }
+
+            if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+                hls = new Hls({
+                    liveDurationInfinity: true,
+                    liveSyncDurationCount: 3,
+                    liveMaxLatencyDurationCount: 5,
+                    maxLiveSyncPlaybackRate: 2,
+                    lowLatencyMode: true,
+                });
+                
+                hls.loadSource(m3u8Url);
+                hls.attachMedia(video);
+
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    retryCount = 0;
+                    video.play().catch(e => console.log("Auto-play prevented", e));
+                    hideLoading();
+                });
+
+                hls.on(Hls.Events.ERROR, function (event, data) {
+                    if (data.fatal) {
+                        switch (data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                showError();
+                                hls.destroy();
+                                scheduleRetry();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                hls.recoverMediaError();
+                                break;
+                            default:
+                                hls.destroy();
+                                scheduleRetry();
+                                break;
+                        }
+                    }
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // For Safari / iOS native HLS
+                video.src = m3u8Url;
+                video.addEventListener('loadedmetadata', function() {
+                    video.play();
+                    hideLoading();
+                });
+                video.addEventListener('error', function() {
+                    showError();
+                    scheduleRetry();
+                });
+            } else {
+                overlay.classList.remove('hidden');
+                overlay.innerHTML = `<div style="text-align: center; color: #ff5555; font-size: 14px;">
+                    HLS.js를 로드하지 못했거나 지원하지 않는 브라우저입니다.
+                </div>`;
+            }
+        }
+
+        function scheduleRetry() {
+            clearTimeout(errorTimeout);
+            retryCount++;
+            let delay = Math.min(3000 * retryCount, 10000); // Max 10초
+            errorTimeout = setTimeout(initPlayer, delay);
+        }
+
+        // Start
+        setTimeout(initPlayer, 100);
+        
+        // Auto-recover on stall
+        video.addEventListener('waiting', () => {
+            clearTimeout(errorTimeout);
+            errorTimeout = setTimeout(() => {
+                if (video.readyState < 3) { initPlayer(); }
+            }, 5000);
+        });
+        
+        video.addEventListener('playing', () => {
+            clearTimeout(errorTimeout);
+            hideLoading();
+        });
+    </script>
+</body>
+</html>

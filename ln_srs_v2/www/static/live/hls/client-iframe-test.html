@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iframe Embed Test</title>
+    <style>
+        body {
+            background-color: #111;
+            color: #eee;
+            font-family: sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h2 { margin-bottom: 5px; }
+        p { color: #aaa; margin-bottom: 20px; text-align: center; }
+        .iframe-container {
+            width: 100%;
+            max-width: 800px;
+            border: 2px dashed #444;
+            padding: 10px;
+            background: #000;
+        }
+        .code-block {
+            background: #222;
+            padding: 15px;
+            border-radius: 5px;
+            width: 100%;
+            max-width: 800px;
+            margin-top: 20px;
+            box-sizing: border-box;
+            overflow-x: auto;
+            color: #a3e635;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h2>고객사 개발자용 임베디드(Iframe) 테스트 페이지</h2>
+    <p>아래 영역은 고객님 홈페이지에 Iframe이 삽입되었을 때 어떻게 보이는지 시뮬레이션한 화면입니다.</p>
+
+    <!-- iframe container -->
+    <div class="iframe-container">
+        <iframe 
+          src="https://stream.kingofzeusfin.com/ll-player-embed.html?tableId=11&camId=1" 
+          allow="autoplay" 
+          style="width: 100%; aspect-ratio: 16/9; border: none; pointer-events: none;"
+          title="Table 11 Cam 1"
+        ></iframe>
+    </div>
+
+    <!-- code snippet display -->
+    <div class="code-block">
+&lt;iframe 
+  src="https://stream.kingofzeusfin.com/ll-player-embed.html?tableId=11&amp;camId=1" 
+  allow="autoplay" 
+  style="width: 100%; aspect-ratio: 16/9; border: none; pointer-events: none;"
+  title="Table 11 Cam 1"
+&gt;&lt;/iframe&gt;
+
+/* 설명 : 위 src 속성에서 tableId=11&amp;camId=1 중 tableId만 1~16까지 바꾸시면 됩니다. */
+    </div>
+</body>
+</html>

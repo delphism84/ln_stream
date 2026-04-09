@@ -1,31 +1,11 @@
-# game.kingofzeusfin.com + kingofzeusfin.com + holdemlive.kingofzeusfin.com (DNS 설정 후 certbot으로 HTTPS 발급 → /etc/nginx/sites-available/fairshipstore-certbot-commands.txt 참고)
-server {
-    listen 80;
-    listen [::]:80;
-    server_name game.kingofzeusfin.com www.game.kingofzeusfin.com kingofzeusfin.com www.kingofzeusfin.com holdemlive.kingofzeusfin.com;
-
-    root /var/zenithpark/fe/dist;
-    index index.html;
-
-    location /.well-known/acme-challenge/ {
-        root /var/www/certbot;
-        allow all;
-    }
-
-    location / {
-        allow all;
-        try_files $uri $uri/ /index.html;
-    }
-}
-
-# stream.kingofzeusfin.com (DNS 설정 후 certbot으로 HTTPS 발급)
+# stream.kingofzeusfin.com HTTP
 server {
     listen 80;
     listen [::]:80;
     server_name stream.kingofzeusfin.com;
 
     # 게임 페이지(다른 도메인)에서 플레이어 iframe 임베드 허용
-    add_header Content-Security-Policy "frame-ancestors 'self' https://game.kingofzeusfin.com https://www.game.kingofzeusfin.com https://kingofzeusfin.com https://www.kingofzeusfin.com https://holdemlive.kingofzeusfin.com";
+    # add_header Content-Security-Policy "frame-ancestors 'self' https://game.kingofzeusfin.com https://www.game.kingofzeusfin.com https://kingofzeusfin.com https://www.kingofzeusfin.com https://holdemlive.kingofzeusfin.com";
     send_timeout 120s;
     # HLS: 404 등에서 text/html이 gzip되면 플레이어/디버깅 혼동 방지
     gzip off;
@@ -67,6 +47,30 @@ server {
         alias /var/www/static/live/hls/hls-verify-player.html;
         add_header Access-Control-Allow-Origin *;
         default_type text/html;
+    }
+    location = /client-iframe-test.html {
+        allow all;
+        alias /var/www/static/live/hls/client-iframe-test.html;
+        add_header Access-Control-Allow-Origin *;
+        default_type text/html;
+    }
+    location = /ll-player-embed.html {
+        allow all;
+        alias /var/www/static/live/hls/ll-player-embed.html;
+        add_header Access-Control-Allow-Origin *;
+        default_type text/html;
+    }
+    location = /ll-player-embed-sample.html {
+        allow all;
+        alias /var/www/static/live/hls/ll-player-embed-sample.html;
+        add_header Access-Control-Allow-Origin *;
+        default_type text/html;
+    }
+    location = /hls.min.js {
+        allow all;
+        alias /var/www/static/live/hls/hls.min.js;
+        add_header Access-Control-Allow-Origin *;
+        default_type application/javascript;
     }
     location = /live/hlsplayer.html {
         allow all;
@@ -226,39 +230,6 @@ server {
     }
 }
 
-# game.kingofzeusfin.com + kingofzeusfin.com + holdemlive.kingofzeusfin.com HTTPS
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name game.kingofzeusfin.com www.game.kingofzeusfin.com kingofzeusfin.com www.kingofzeusfin.com holdemlive.kingofzeusfin.com;
-
-    ssl_certificate     /etc/letsencrypt/live/game.kingofzeusfin.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/game.kingofzeusfin.com/privkey.pem;
-    include             /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
-
-    root /var/zenithpark/fe/dist;
-    index index.html;
-
-    # ZenithPark 홀덤 BE (Node :3080) — WebSocket만 프록시 (기존 location / 는 유지)
-    location /ws/holdem {
-        proxy_pass http://127.0.0.1:3080/ws/holdem;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 86400s;
-    }
-
-    location / {
-        allow all;
-        try_files $uri $uri/ /index.html;
-    }
-}
-
 # stream.kingofzeusfin.com HTTPS
 server {
     listen 443 ssl;
@@ -271,7 +242,7 @@ server {
     ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
 
     # 게임 페이지(다른 도메인)에서 플레이어 iframe 임베드 허용
-    add_header Content-Security-Policy "frame-ancestors 'self' https://game.kingofzeusfin.com https://www.game.kingofzeusfin.com https://kingofzeusfin.com https://www.kingofzeusfin.com https://holdemlive.kingofzeusfin.com";
+    # add_header Content-Security-Policy "frame-ancestors 'self' https://game.kingofzeusfin.com https://www.game.kingofzeusfin.com https://kingofzeusfin.com https://www.kingofzeusfin.com https://holdemlive.kingofzeusfin.com";
     send_timeout 120s;
     # HLS: 404 등에서 text/html이 gzip되면 플레이어/디버깅 혼동 방지
     gzip off;
@@ -313,6 +284,30 @@ server {
         alias /var/www/static/live/hls/hls-verify-player.html;
         add_header Access-Control-Allow-Origin *;
         default_type text/html;
+    }
+    location = /client-iframe-test.html {
+        allow all;
+        alias /var/www/static/live/hls/client-iframe-test.html;
+        add_header Access-Control-Allow-Origin *;
+        default_type text/html;
+    }
+    location = /ll-player-embed.html {
+        allow all;
+        alias /var/www/static/live/hls/ll-player-embed.html;
+        add_header Access-Control-Allow-Origin *;
+        default_type text/html;
+    }
+    location = /ll-player-embed-sample.html {
+        allow all;
+        alias /var/www/static/live/hls/ll-player-embed-sample.html;
+        add_header Access-Control-Allow-Origin *;
+        default_type text/html;
+    }
+    location = /hls.min.js {
+        allow all;
+        alias /var/www/static/live/hls/hls.min.js;
+        add_header Access-Control-Allow-Origin *;
+        default_type application/javascript;
     }
     location = /live/hlsplayer.html {
         allow all;
