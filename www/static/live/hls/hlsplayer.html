@@ -137,6 +137,7 @@
     })[0];
     var drift = playing ? playing.sn - targetSn : 99;
     if (drift === 0) return;
+    if (drift === 1 && playing && playing.sn === targetSn + 1) return;
     if (Date.now() - lastSeekAt < 1500) return;
     lastSeekAt = Date.now();
     video.currentTime = frag.start + 0.04;

@@ -13,7 +13,7 @@ Environment=HLS_BASE=https://stream.kingofzeusfin.com/live
 Environment=CAPTURE_SOURCE=hls
 Environment=INTERVAL_LIVE_SEC=10
 Environment=INTERVAL_FALLBACK_SEC=60
-Environment=STREAM_IDS=table01_01,table02_01,table03_01,table04_01,table05_01,table06_01,table07_01,table08_01,table09_01,table10_01,table11_01,table12_01,table13_01,table14_01,table15_01,table16_01
+Environment=STREAM_IDS=table01_01,table02_01,table03_01,table04_01,table05_01,table06_01,table07_01,table08_01,table09_01,table10_01,table11_01,table12_01,table13_01,table14_01,table15_01,table16_01,table01_02,table02_02,table03_02,table04_02,table05_02,table06_02,table07_02,table08_02,table09_02,table10_02,table11_02,table12_02,table13_02,table14_02,table15_02,table16_02
 Restart=always
 RestartSec=5
 User=root

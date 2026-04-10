@@ -56,18 +56,126 @@
     </script>
 
     <script>
-        // Parse URL params
+        // URL params:
+        //   signal=0  WebSocket 시그널 끔 (기본: 켬)
+        //   syncSegs  라이브 엣지 대비 세그먼트 수 1–12 (기본 1, hlsplayer와 동일)
+        //   wsUrl     시그널 WebSocket 전체 URL (선택)
         const urlParams = new URLSearchParams(window.location.search);
         const tableId = urlParams.get('tableId') ? urlParams.get('tableId').padStart(2, '0') : '01';
         const camId = urlParams.get('camId') ? urlParams.get('camId').padStart(2, '0') : '01';
         const streamName = `table${tableId}_${camId}`;
         const m3u8Url = `/llhls/live/${streamName}.m3u8`;
+        const useSignal = urlParams.get('signal') !== '0';
+        const syncSegs = Math.max(1, Math.min(12, parseInt(urlParams.get('syncSegs') || '1', 10) || 1));
+        const wsOverride = urlParams.get('wsUrl');
+
+        const origin = location.origin;
+        const wsBuilt = (function () {
+            if (wsOverride) return wsOverride;
+            const u = new URL(origin);
+            u.protocol = u.protocol === 'https:' ? 'wss:' : 'ws:';
+            u.pathname = '/sync/ws';
+            u.search = '';
+            u.hash = '';
+            return u.toString();
+        })();
 
         const video = document.getElementById('video');
         const overlay = document.getElementById('overlay');
         let hls = null;
         let retryCount = 0;
         let errorTimeout = null;
+        let ws = null;
+        let lastSeekAt = 0;
+        let lastTick = null;
+
+        function buildHlsConfig() {
+            if (useSignal) {
+                return {
+                    lowLatencyMode: false,
+                    liveSyncDurationCount: syncSegs,
+                    liveMaxLatencyDurationCount: Math.max(3, syncSegs + 3),
+                    maxBufferLength: 14,
+                    maxMaxBufferLength: 32,
+                    liveDurationInfinity: true,
+                    maxLiveSyncPlaybackRate: 1.12,
+                    startPosition: -1
+                };
+            }
+            return {
+                liveDurationInfinity: true,
+                liveSyncDurationCount: 3,
+                liveMaxLatencyDurationCount: 5,
+                maxLiveSyncPlaybackRate: 2,
+                lowLatencyMode: true
+            };
+        }
+
+        function postToParent(payload) {
+            try {
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage(Object.assign({
+                        t: 'll-player-embed',
+                        stream: streamName,
+                        sync: useSignal,
+                        syncSegs: syncSegs
+                    }, payload), '*');
+                }
+            } catch (e) {}
+        }
+
+        function seekToTargetSn(targetSn) {
+            if (!hls || !video) return;
+            const det = hls.levels && hls.levels[hls.currentLevel] && hls.levels[hls.currentLevel].details;
+            if (!det || !det.fragments || !det.fragments.length) return;
+            const frag = det.fragments.filter(function (f) { return f.sn === targetSn; })[0];
+            if (!frag || typeof frag.start !== 'number') return;
+            const playing = det.fragments.filter(function (f) {
+                return video.currentTime >= f.start && video.currentTime < f.start + (f.duration || 0) + 0.05;
+            })[0];
+            var drift = playing ? playing.sn - targetSn : 99;
+            if (drift === 0) return;
+            if (Date.now() - lastSeekAt < 1500) return;
+            lastSeekAt = Date.now();
+            video.currentTime = frag.start + 0.04;
+        }
+
+        function connectSignal() {
+            if (!useSignal || !window.WebSocket) return;
+            if (ws != null) return;
+            try {
+                ws = new WebSocket(wsBuilt);
+            } catch (e) {
+                ws = null;
+                setTimeout(connectSignal, 2000);
+                return;
+            }
+            ws.onopen = function () {
+                ws.send(JSON.stringify({ op: 'sub', stream: streamName, syncSegs: syncSegs }));
+            };
+            ws.onmessage = function (ev) {
+                var msg;
+                try {
+                    msg = JSON.parse(ev.data);
+                } catch (e) {
+                    return;
+                }
+                if (msg.op === 'tick') {
+                    lastTick = msg;
+                    if (typeof msg.targetSn === 'number' && typeof Hls !== 'undefined' && Hls.isSupported() && hls) {
+                        seekToTargetSn(msg.targetSn);
+                    }
+                    postToParent({ signal: msg });
+                } else if (msg.op === 'subscribed') {
+                    postToParent({ subscribed: msg });
+                }
+            };
+            ws.onerror = function () {};
+            ws.onclose = function () {
+                ws = null;
+                if (useSignal) setTimeout(connectSignal, 2000);
+            };
+        }
 
         function showLoading() {
             overlay.classList.remove('hidden');
@@ -88,17 +196,11 @@
 
         function initPlayer() {
             showLoading();
-            if (hls) { hls.destroy(); }
+            if (hls) { hls.destroy(); hls = null; }
 
             if (typeof Hls !== 'undefined' && Hls.isSupported()) {
-                hls = new Hls({
-                    liveDurationInfinity: true,
-                    liveSyncDurationCount: 3,
-                    liveMaxLatencyDurationCount: 5,
-                    maxLiveSyncPlaybackRate: 2,
-                    lowLatencyMode: true,
-                });
-                
+                hls = new Hls(buildHlsConfig());
+
                 hls.loadSource(m3u8Url);
                 hls.attachMedia(video);
 
@@ -114,6 +216,7 @@
                             case Hls.ErrorTypes.NETWORK_ERROR:
                                 showError();
                                 hls.destroy();
+                                hls = null;
                                 scheduleRetry();
                                 break;
                             case Hls.ErrorTypes.MEDIA_ERROR:
@@ -121,19 +224,23 @@
                                 break;
                             default:
                                 hls.destroy();
+                                hls = null;
                                 scheduleRetry();
                                 break;
                         }
                     }
                 });
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                // For Safari / iOS native HLS
+                video.removeAttribute('src');
+                video.load();
                 video.src = m3u8Url;
-                video.addEventListener('loadedmetadata', function() {
+                video.addEventListener('loadedmetadata', function onMeta() {
+                    video.removeEventListener('loadedmetadata', onMeta);
                     video.play();
                     hideLoading();
                 });
-                video.addEventListener('error', function() {
+                video.addEventListener('error', function onErr() {
+                    video.removeEventListener('error', onErr);
                     showError();
                     scheduleRetry();
                 });
@@ -152,17 +259,17 @@
             errorTimeout = setTimeout(initPlayer, delay);
         }
 
-        // Start
+        if (useSignal) connectSignal();
+
         setTimeout(initPlayer, 100);
-        
-        // Auto-recover on stall
+
         video.addEventListener('waiting', () => {
             clearTimeout(errorTimeout);
             errorTimeout = setTimeout(() => {
                 if (video.readyState < 3) { initPlayer(); }
             }, 5000);
         });
-        
+
         video.addEventListener('playing', () => {
             clearTimeout(errorTimeout);
             hideLoading();

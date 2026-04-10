@@ -24,10 +24,15 @@ const CAPTURE_SOURCE = (process.env.CAPTURE_SOURCE || 'rtmp').toLowerCase();
 const INTERVAL_LIVE_MS = Number(process.env.INTERVAL_LIVE_SEC || 10) * 1000;
 const INTERVAL_FALLBACK_MS = Number(process.env.INTERVAL_FALLBACK_SEC || 60) * 1000;
 
-/** table01_01 ~ table01_16 (쉼표로 오버라이드 가능) */
-const DEFAULT_STREAM_IDS = Array.from({ length: 16 }, (_, i) =>
-  `table01_${String(i + 1).padStart(2, '0')}`
-);
+/** table01_01~table16_01 + table01_02~table16_02 (게임 BE LiveThumb / nginx /live/thumb/ 와 동일 이름) */
+const DEFAULT_STREAM_IDS = [
+  ...Array.from({ length: 16 }, (_, i) =>
+    `table${String(i + 1).padStart(2, '0')}_01`
+  ),
+  ...Array.from({ length: 16 }, (_, i) =>
+    `table${String(i + 1).padStart(2, '0')}_02`
+  ),
+];
 const STREAM_IDS = process.env.STREAM_IDS
   ? process.env.STREAM_IDS.split(',').map((s) => s.trim()).filter(Boolean)
   : DEFAULT_STREAM_IDS;
