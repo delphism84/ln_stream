@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>18 Cams Test · ll-player-embed</title>
+    <style>
+        body { margin: 0; padding: 10px; background: #000; display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+        .cam-wrapper { position: relative; width: 100%; padding-bottom: 56.25%; background: #222; }
+        .cam-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
+        .cam-label { position: absolute; top: 5px; left: 5px; color: yellow; background: rgba(0,0,0,0.5); padding: 2px 5px; font-family: sans-serif; z-index: 100; pointer-events: none; }
+    </style>
+</head>
+<body id="cams">
+    <script>
+        const container = document.getElementById('cams');
+        const tables = ['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18'];
+        tables.forEach(function (t) {
+            const div = document.createElement('div');
+            div.className = 'cam-wrapper';
+            div.innerHTML =
+                '<div class="cam-label">Table ' + t + '</div>' +
+                '<iframe src="/ll-player-embed.html?tableId=' + t + '&camId=01" allow="autoplay; fullscreen" muted autoplay playsinline></iframe>';
+            container.appendChild(div);
+        });
+    </script>
+</body>
+</html>

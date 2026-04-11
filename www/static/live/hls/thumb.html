@@ -164,14 +164,14 @@
       return (n < 10 ? "0" : "") + n;
     }
 
-    /** thumb-list.json + table01_01 … table16_01 후보를 합쳐 중복 제거 */
+    /** thumb-list.json + table01_01 … table18_01 후보를 합쳐 중복 제거 */
     function buildIdList(jsonIds) {
       var set = {};
       function add(id) {
         if (id && typeof id === "string") set[id] = true;
       }
       if (Array.isArray(jsonIds)) jsonIds.forEach(add);
-      for (var i = 1; i <= 16; i++) {
+      for (var i = 1; i <= 18; i++) {
         add("table" + pad2(i) + "_01");
       }
       return Object.keys(set).sort();

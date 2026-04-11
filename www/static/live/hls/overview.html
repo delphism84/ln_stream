@@ -130,6 +130,8 @@
     var THUMB_BASE = location.origin + '/live/thumb';
     var PLAYER_BASE = location.origin + '/live/player.html?stream=';
     var LIVE_BASE = location.origin + '/live/';
+    /** RTMP/SRS 라이브 테이블 수 (table01_01 … tableNN_01) */
+    var TABLE_COUNT = 18;
 
     function tableId(n) {
       var nn = String(n).padStart(2, '0');
@@ -138,7 +140,7 @@
 
     function buildList() {
       var ids = [];
-      for (var i = 1; i <= 16; i += 1) ids.push(tableId(i));
+      for (var i = 1; i <= TABLE_COUNT; i += 1) ids.push(tableId(i));
       return ids;
     }
 
@@ -168,14 +170,14 @@
           status.textContent = 'OK';
           status.className = 'status ok';
           okCount += 1;
-          summaryEl.textContent = '총 16개 · OK ' + okCount + ' / FAIL ' + (16 - okCount);
+          summaryEl.textContent = '총 ' + TABLE_COUNT + '개 · OK ' + okCount + ' / FAIL ' + (TABLE_COUNT - okCount);
         };
         img.onerror = function () {
           img.dataset.status = 'fail';
           img.removeAttribute('src');
           status.textContent = 'FAIL';
           status.className = 'status fail';
-          summaryEl.textContent = '총 16개 · OK ' + okCount + ' / FAIL ' + (16 - okCount);
+          summaryEl.textContent = '총 ' + TABLE_COUNT + '개 · OK ' + okCount + ' / FAIL ' + (TABLE_COUNT - okCount);
         };
 
         var info = document.createElement('div');
@@ -215,10 +217,10 @@
       });
 
       var initialOk = okSet ? okSet.size : 0;
-      summaryEl.textContent = '총 16개 · OK ' + initialOk + ' / FAIL ' + (16 - initialOk) + ' (로딩 결과로 갱신됨)';
+      summaryEl.textContent = '총 ' + TABLE_COUNT + '개 · OK ' + initialOk + ' / FAIL ' + (TABLE_COUNT - initialOk) + ' (로딩 결과로 갱신됨)';
     }
 
-    // thumb-list.json이 있으면 "현재 생성된 thumb" 참고 (그래도 16개는 모두 렌더)
+    // thumb-list.json이 있으면 "현재 생성된 thumb" 참고 (그래도 TABLE_COUNT개는 모두 렌더)
     fetch(location.origin + '/live/thumb/thumb-list.json?t=' + Date.now())
       .then(function (r) { return r.ok ? r.json() : []; })
       .catch(function () { return []; })
